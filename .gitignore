@@ -1,0 +1,15 @@
+# SQLite
+db.sqlite3
+
+# Python
+*.pyc
+__pycache__/
+
+# Env
+.env
+venv/
+.venv/
+
+# IDE files
+.idea/
+.vscode/

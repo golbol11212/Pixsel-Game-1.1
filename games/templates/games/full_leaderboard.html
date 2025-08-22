@@ -1,0 +1,176 @@
+{% extends 'users/base.html' %}
+
+{% block title %}
+Таблиця рекордів - PIXSGAME
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <h3 class="mb-4 text-center">🏆 ТАБЛИЦЯ РЕКОРДІВ</h3>
+
+    {% if user.is_authenticated and personal_scores %}
+    <div class="pixel-card personal-scores-card mb-5">
+        <div class="pixel-header p-3">
+            <h4>⭐ МОЇ НАЙКРАЩІ РЕЗУЛЬТАТИ</h4>
+        </div>
+        <div class="p-4">
+            <div class="row">
+                {% for game_title, score in personal_scores.items %}
+                <div class="col-md-6 mb-3">
+                    <div class="personal-score-item">
+                        <strong>{{ game_title }}:</strong> {{ score.score }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="pixel-card">
+        <div class="pixel-header p-3">
+            <h4>🌍 ГЛОБАЛЬНІ РЕКОРДИ</h4>
+        </div>
+        <div class="p-4">
+            <div class="row">
+                {% for game_title, scores in global_scores.items %}
+                <div class="col-lg-6 mb-4">
+                    <div class="leaderboard-game-card leaderboard-expandable" onclick="toggleLeaderboard(this)">
+                        <h5>{{ game_title }}</h5>
+                        <hr>
+                        {% if scores %}
+                            <ul class="list-unstyled">
+                                {% for score in scores|slice:":3" %}
+                                    <li class="d-flex justify-content-between mb-2 leaderboard-entry {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">
+                                        <span>{{ forloop.counter }}. {{ score.user.username }}</span>
+                                        <strong>{{ score.score }}</strong>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            {% if scores|length > 3 %}
+                            <ul class="list-unstyled leaderboard-more">
+                                {% for score in scores|slice:"3:" %}
+                                    <li class="d-flex justify-content-between mb-2">
+                                        <span>{{ forloop.counter|add:3 }}. {{ score.user.username }}</span>
+                                        <strong>{{ score.score }}</strong>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            <p class="text-center text-muted small mt-2">Натисніть, щоб показати більше</p>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted text-center">Рекордів поки немає...</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .leaderboard-game-card {
+        border: 3px solid #00ffff;
+        padding: 15px;
+        background-color: #1a1a2e;
+        height: 100%;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .leaderboard-game-card:hover {
+        transform: translateY(-5px) rotate(1deg);
+        box-shadow: 0 0 15px #00ffff80;
+    }
+    .leaderboard-game-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%),
+                    linear-gradient(-45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%);
+        background-size: 10px 10px;
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
+    .leaderboard-game-card h5 {
+        color: #00ffff;
+        text-shadow: 2px 2px 0 #006b6b;
+        margin-bottom: 10px;
+        font-size: 12px;
+    }
+    .leaderboard-game-card hr {
+        border: none;
+        height: 2px;
+        background: linear-gradient(to right, transparent, #00ffff, transparent);
+    }
+    .leaderboard-game-card ul li {
+        font-size: 10px;
+        margin-bottom: 5px;
+        padding: 4px;
+        border-radius: 2px;
+        transition: background-color 0.2s;
+    }
+    .leaderboard-game-card ul li:hover {
+        background-color: #ffffff10;
+    }
+
+    .leaderboard-entry.gold {
+        color: #FFD700;
+        text-shadow: 1px 1px 0 #c8a900;
+        background: linear-gradient(45deg, #ffd70020, transparent);
+    }
+    .leaderboard-entry.silver {
+        color: #C0C0C0;
+        text-shadow: 1px 1px 0 #a0a0a0;
+        background: linear-gradient(45deg, #c0c0c020, transparent);
+    }
+    .leaderboard-entry.bronze {
+        color: #CD7F32;
+        text-shadow: 1px 1px 0 #a5652a;
+        background: linear-gradient(45deg, #cd7f3220, transparent);
+    }
+    .leaderboard-expandable {
+        cursor: pointer;
+    }
+    .leaderboard-more {
+        display: none;
+    }
+    .personal-scores-card {
+        background: linear-gradient(135deg, #1a1a2e, #2d1d44);
+        border: 4px solid #6b006b;
+        box-shadow: 0 0 25px #6b006b80;
+    }
+    .personal-scores-card .personal-score-item {
+        color: #ff00ff;
+        font-size: 11px;
+        text-shadow: 1px 1px 0 #6b006b;
+        background-color: #ffffff10;
+        padding: 10px;
+        border-radius: 4px;
+        border-left: 3px solid #ff00ff;
+    }
+    .personal-scores-card .personal-score-item strong {
+        color: #fff;
+    }
+</style>
+
+<script>
+    function toggleLeaderboard(element) {
+        const moreScores = element.querySelector('.leaderboard-more');
+        if (moreScores) {
+            if (moreScores.style.display === 'none' || moreScores.style.display === '') {
+                moreScores.style.display = 'block';
+                element.querySelector('p.small').style.display = 'none';
+            } else {
+                moreScores.style.display = 'none';
+                element.querySelector('p.small').style.display = 'block';
+            }
+        }
+    }
+</script>
+{% endblock %}

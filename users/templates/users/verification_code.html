@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Подтверждение регистрации</h2>
+    <p>Пожалуйста, введите 6-значный код подтверждения, отправленный на ваш email.</p>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.verification_code.label_tag }}
+        {{ form.verification_code }}
+        {% if form.verification_code.errors %}
+            <div class="text-danger">{{ form.verification_code.errors }}</div>
+        {% endif %}
+        <button type="submit" class="btn btn-primary mt-3">Подтвердить</button>
+    </form>
+    {% if messages %}
+        <ul class="mt-3">
+            {% for message in messages %}
+                <li class="text-{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>
+{% endblock %}

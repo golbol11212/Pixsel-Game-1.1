@@ -1,0 +1,443 @@
+{% extends 'users/base.html' %}
+
+{% block title %}
+Літаюча Пташка - PIXSGAME
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="row">
+        <div class="col-lg-4 order-lg-1">
+            <div class="pixel-card mb-4">
+                <div class="pixel-header p-3">
+                    <h3>🏆 ЛІДЕРИ</h3>
+                </div>
+                <div class="p-4">
+                    {% if top_scores %}
+                        <ul class="list-unstyled">
+                            {% for score in top_scores %}
+                                <li class="d-flex justify-content-between mb-2">
+                                    <span>{{ forloop.counter }}. {{ score.user.username }}</span>
+                                    <strong>{{ score.score }}</strong>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-center">Таблиця лідерів поки порожня...</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="pixel-card">
+                <div class="pixel-header p-3">
+                    <h3>💬 КОМЕНТАРІ</h3>
+                </div>
+                <div class="p-4" style="height: 400px; overflow-y: auto;" id="comments-container">
+                    {% for comment in comments %}
+                    <div class="comment-item mb-3">
+                        <strong>{{ comment.user.username }}:</strong>
+                        <p class="mb-1">{{ comment.content }}</p>
+                        <small class="text-muted">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">Коментарів поки немає...</p>
+                    {% endfor %}
+                </div>
+                {% if user.is_authenticated %}
+                <div class="p-4 pt-0">
+                    <div class="input-group">
+                        <input type="text" id="comment-input" class="pixel-input form-control" placeholder="Написати коментар..." maxlength="500">
+                        <button class="pixel-btn" type="button" onclick="addComment()">Відправити</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-4 pt-0">
+                    <p class="text-center text-muted">
+                        <a href="{% url 'users:login' %}?next={% url 'games:flappy_bird' %}">Увійдіть</a>, щоб залишити коментар
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-8 order-lg-2">
+            <div class="pixel-card">
+                <div class="pixel-header p-3">
+                    <h3>🐦 ЛІТАЮЧА ПТАШКА</h3>
+                </div>
+                <div class="p-4 text-center">
+                    <style>
+                        /* Стили для игрового поля */
+                        #gameCanvas {
+                            border: 3px solid #228b22;
+                            background: #87ceeb;
+                            image-rendering: pixelated;
+                            image-rendering: -moz-crisp-edges;
+                            image-rendering: crisp-edges;
+                            box-shadow: 0 0 20px #22882250;
+                        }
+
+                        /* Стили для пиксельных кнопок */
+                        .pixel-btn {
+                            background-color: #ff00ff;
+                            color: white !important;
+                            border: 3px solid #000;
+                            outline: 3px solid #ff00ff;
+                            outline-offset: -6px;
+                            font-family: 'Press Start 2P', cursive;
+                            font-size: 10px;
+                            padding: 12px;
+                            box-shadow: 
+                                4px 4px 0 #6b006b,
+                                inset -2px -2px 0 rgba(0, 0, 0, 0.3),
+                                inset 2px 2px 0 rgba(255, 255, 255, 0.2);
+                            transition: all 0.1s;
+                            position: relative;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            text-shadow: 1px 1px 0 #6b006b;
+                            margin: 0 5px;
+                        }
+                        .pixel-btn:hover, .pixel-btn:focus {
+                            transform: translate(2px, 2px);
+                            box-shadow: 
+                                2px 2px 0 #6b006b,
+                                inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+                                inset 1px 1px 0 rgba(255, 255, 255, 0.2);
+                            background-color: #e600e6;
+                        }
+                        .pixel-btn:active {
+                            transform: translate(4px, 4px);
+                            box-shadow: 
+                                0px 0px 0 #6b006b,
+                                inset 2px 2px 0 rgba(0, 0, 0, 0.3);
+                        }
+
+                        /* Стили для пиксельного поля ввода */
+                        .pixel-input {
+                            font-family: 'Press Start 2P', cursive;
+                            font-size: 14px;
+                            border: 3px solid #00ffff;
+                            background-color: #0f0f1a;
+                            color: white;
+                            border-radius: 0;
+                            padding: 15px;
+                            transition: all 0.3s;
+                            width: 100%;
+                            box-sizing: border-box;
+                        }
+                        .pixel-input:focus {
+                            outline: none;
+                            border-color: #ff00ff;
+                            box-shadow: 0 0 0 3px rgba(255, 0, 255, 0.3);
+                            animation: input-glow 1.5s infinite alternate;
+                        }
+                        @keyframes input-glow {
+                            0% { box-shadow: 0 0 0 3px rgba(255, 0, 255, 0.3); }
+                            100% { box-shadow: 0 0 0 6px rgba(255, 0, 255, 0.1); }
+                        }
+                    </style>
+                    <canvas id="gameCanvas" width="400" height="500"></canvas>
+                    
+                    <div class="game-info mt-4">
+                        <div id="score" class="score">Рахунок: 0</div>
+                        <div class="controls mt-2">Керування: Пробіл або клік для польоту</div>
+                    </div>
+
+                    <div id="gameOverButtons" style="display: none;" class="mt-4">
+                        <button class="pixel-btn" onclick="saveScore()">Зберегти результат</button>
+                        <button class="pixel-btn" onclick="resetGame()">Почати заново</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const gameOverButtons = document.getElementById('gameOverButtons');
+    
+    let birdY = canvas.height / 2;
+    let birdVelocity = 0;
+    let pipes = [];
+    let score = 0;
+    let gameRunning = true;
+    let gameStarted = false;
+    let frame = 0;
+    
+    const birdX = 80;
+    const birdSize = 20;
+    const gravity = 0.4;
+    const jumpPower = -9;
+    const pipeWidth = 80;
+    const pipeGap = 140;
+    const pipeSpeed = 3;
+    
+    function spawnPipe() {
+        const minHeight = 50;
+        const maxHeight = canvas.height - pipeGap - 50;
+        const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
+        
+        pipes.push({
+            x: canvas.width,
+            topHeight: topHeight,
+            bottomY: topHeight + pipeGap,
+            passed: false
+        });
+    }
+    
+    function update() {
+        if (!gameRunning || !gameStarted) return;
+        
+        frame++;
+        birdVelocity += gravity;
+        birdY += birdVelocity;
+        
+        if (birdY <= 0 || birdY >= canvas.height - birdSize) {
+            gameOver();
+            return;
+        }
+        
+        if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 200) {
+            spawnPipe();
+        }
+        
+        for (let i = pipes.length - 1; i >= 0; i--) {
+            const pipe = pipes[i];
+            pipe.x -= pipeSpeed;
+            
+            if (pipe.x + pipeWidth < 0) {
+                pipes.splice(i, 1);
+                continue;
+            }
+            
+            if (!pipe.passed && pipe.x + pipeWidth < birdX) {
+                pipe.passed = true;
+                score++;
+                scoreElement.textContent = `Рахунок: ${score}`;
+            }
+            
+            if (birdX + birdSize > pipe.x && birdX < pipe.x + pipeWidth) {
+                if (birdY < pipe.topHeight || birdY + birdSize > pipe.bottomY) {
+                    gameOver();
+                    return;
+                }
+            }
+        }
+    }
+    
+    function draw() {
+        ctx.fillStyle = '#87ceeb';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#ffffff40';
+        for (let i = 0; i < 3; i++) {
+            const cloudX = (frame * 0.5 + i * 150) % (canvas.width + 60);
+            ctx.fillRect(cloudX, 40 + i * 100, 40, 20);
+            ctx.fillRect(cloudX + 10, 30 + i * 100, 20, 20);
+            ctx.fillRect(cloudX + 20, 35 + i * 100, 30, 15);
+        }
+        
+        pipes.forEach(pipe => {
+            const pipeShadowColor = '#1d6e1d';
+            const pipeMainColor = '#228b22';
+            const pipeLightColor = '#32cd32';
+            const pipeTopColor = '#006400';
+
+            // Нижняя труба с тенью
+            ctx.fillStyle = pipeShadowColor;
+            ctx.fillRect(pipe.x + 4, pipe.bottomY + 4, pipeWidth, canvas.height - pipe.bottomY);
+            ctx.fillStyle = pipeMainColor;
+            ctx.fillRect(pipe.x, pipe.bottomY, pipeWidth, canvas.height - pipe.bottomY);
+            ctx.fillStyle = pipeTopColor;
+            ctx.fillRect(pipe.x, pipe.bottomY, pipeWidth, 10);
+
+            // Верхняя труба с тенью
+            ctx.fillStyle = pipeShadowColor;
+            ctx.fillRect(pipe.x + 4, 4, pipeWidth, pipe.topHeight);
+            ctx.fillStyle = pipeMainColor;
+            ctx.fillRect(pipe.x, 0, pipeWidth, pipe.topHeight);
+            ctx.fillStyle = pipeTopColor;
+            ctx.fillRect(pipe.x, pipe.topHeight - 10, pipeWidth, 10);
+        });
+        
+        const wingFlap = Math.sin(frame * 0.3) > 0;
+        
+        // Рисуем птицу с пиксельным 3D-эффектом
+        ctx.fillStyle = '#cc4400'; // Тень
+        ctx.fillRect(birdX + 2, birdY + 2, birdSize, birdSize);
+        ctx.fillStyle = '#ff6b35'; // Основной цвет тела
+        ctx.fillRect(birdX, birdY, birdSize, birdSize);
+        ctx.fillStyle = '#ff8c42'; // Блик на теле
+        ctx.fillRect(birdX + 2, birdY + 2, birdSize - 4, birdSize - 4);
+        
+        ctx.fillStyle = '#000'; // Глаз
+        ctx.fillRect(birdX + 12, birdY + 6, 3, 3);
+        
+        ctx.fillStyle = '#ffa500'; // Клюв
+        ctx.fillRect(birdX + 16, birdY + 10, 6, 3);
+        
+        if (wingFlap) { // Крыло
+            ctx.fillStyle = '#ff4500';
+            ctx.fillRect(birdX - 5, birdY + 5, 8, 6);
+        }
+        
+        if (!gameStarted) {
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.font = '18px Press Start 2P';
+            ctx.textAlign = 'center';
+            ctx.fillText('Натисніть ПРОБІЛ для початку', canvas.width/2, canvas.height/2);
+            ctx.textAlign = 'left';
+        }
+    }
+    
+    function gameOver() {
+        gameRunning = false;
+        ctx.fillStyle = 'rgba(255,0,0,0.8)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = '24px Press Start 2P';
+        ctx.textAlign = 'center';
+        ctx.fillText('ГРУ ЗАКІНЧЕНО!', canvas.width/2, canvas.height/2 - 40);
+        ctx.fillText(`Рахунок: ${score}`, canvas.width/2, canvas.height/2);
+        gameOverButtons.style.display = 'block';
+    }
+    
+    function resetGame() {
+        birdY = canvas.height / 2;
+        birdVelocity = 0;
+        pipes = [];
+        score = 0;
+        gameRunning = true;
+        gameStarted = false;
+        frame = 0;
+        scoreElement.textContent = `Рахунок: ${score}`;
+        gameOverButtons.style.display = 'none';
+    }
+    
+    function saveScore() {
+        const scoreData = {
+            game_name: 'flappy_bird',
+            score: score,
+            level: 1
+        };
+
+        fetch('/games/save-score/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(scoreData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Результат збережено!');
+            } else {
+                alert('Помилка при збереженні результату: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            alert('Помилка при збереженні результату.');
+        });
+    }
+
+    function jump() {
+        if (!gameRunning && gameStarted) return;
+        if (!gameStarted) {
+            gameStarted = true;
+            return;
+        }
+        birdVelocity = jumpPower;
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            jump();
+        }
+        if (e.code === 'KeyR' && (!gameRunning || !gameStarted)) {
+            resetGame();
+        }
+    });
+    
+    canvas.addEventListener('click', jump);
+
+    // Comments functionality
+    function addComment() {
+        const commentInput = document.getElementById('comment-input');
+        const content = commentInput.value.trim();
+        
+        if (!content) {
+            alert('Введіть коментар!');
+            return;
+        }
+
+        const commentData = {
+            game_name: 'flappy_bird',
+            content: content
+        };
+
+        fetch('/games/save-comment/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(commentData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const commentsContainer = document.getElementById('comments-container');
+                const newComment = document.createElement('div');
+                newComment.className = 'comment-item mb-3';
+                newComment.innerHTML = `
+                    <strong>${data.comment.username}:</strong>
+                    <p class="mb-1">${data.comment.content}</p>
+                    <small class="text-muted">${data.comment.created_at}</small>
+                `;
+                
+                const firstComment = commentsContainer.firstElementChild;
+                if (firstComment && firstComment.tagName === 'P') {
+                    commentsContainer.innerHTML = '';
+                }
+                commentsContainer.insertBefore(newComment, commentsContainer.firstChild);
+                
+                commentInput.value = '';
+            } else {
+                alert('Помилка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            alert('Помилка при відправці коментаря.');
+        });
+    }
+
+    // Allow Enter key to submit comment
+    if (document.getElementById('comment-input')) {
+        document.getElementById('comment-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addComment();
+            }
+        });
+    }
+    
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+    
+    gameLoop();
+
+</script>
+{% endblock %}

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PIXSGAME{% endblock %}</title>
+    {% load static %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body {
+            background-color: #1a1a2e;
+            background-image: 
+                linear-gradient(#2d2d44 1px, transparent 1px),
+                linear-gradient(90deg, #2d2d44 1px, transparent 1px);
+            background-size: 20px 20px;
+            font-family: 'Press Start 2P', cursive;
+            color: #ffffff;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(255, 0, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 80% 70%, rgba(0, 255, 255, 0.1) 0%, transparent 20%);
+            pointer-events: none;
+            z-index: -1;
+            animation: pixel-flicker 3s infinite alternate;
+        }
+        
+        @keyframes pixel-flicker {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .navbar {
+            background-color: #6b006b;
+            border-bottom: 4px solid #4a2d8c;
+            box-shadow: 0 4px 0 #2d1d44;
+            margin-bottom: 20px;
+        }
+        .navbar-brand {
+            color: #ff00ff !important;
+            font-size: 16px;
+            text-shadow: 3px 3px 0 #4a2d8c;
+            letter-spacing: 2px;
+            animation: header-blink 1.5s infinite;
+        }
+        
+        @keyframes header-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .navbar-nav {
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #00ffff !important;
+            font-size: 10px;
+            margin: 0 5px;
+            padding: 8px 12px !important;
+            border: 3px solid #00ffff;
+            background-color: #0f0f1a;
+            box-shadow: 3px 3px 0 #006b6b;
+            transition: all 0.1s;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 0 #006b6b;
+        }
+        
+        .nav-link:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0 #006b6b;
+            background-color: #0d0d18;
+            color: #ff00ff !important;
+            border-color: #ff00ff;
+            text-shadow: 1px 1px 0 #6b006b;
+        }
+        
+        .nav-link.active {
+            color: #ff00ff !important;
+            border-color: #ff00ff;
+            text-shadow: 1px 1px 0 #6b006b;
+        }
+
+        .container {
+            max-width: 800px;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: #ff00ff;
+            text-shadow: 3px 3px 0 #6b006b;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .main-content {
+            background-color: #0f0f1a;
+            border: 4px solid #ff00ff;
+            box-shadow: 8px 8px 0 #6b006b;
+            padding: 30px; /* Увеличил padding для лучшего внешнего вида */
+            position: relative;
+        }
+        
+        /* Дополнительные стили для контента */
+        .content-box {
+            border: 3px solid #00ffff;
+            padding: 20px;
+            margin-bottom: 25px;
+            background-color: #1a1a2e;
+            box-shadow: 4px 4px 0 #006b6b;
+        }
+
+        .content-box h4 {
+            color: #00ffff;
+            text-shadow: 2px 2px 0 #006b6b;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+
+        .content-box p {
+            color: #aaaaaa;
+            font-size: 10px;
+            line-height: 1.8;
+        }
+
+        .pixel-divider {
+            border: none;
+            height: 3px;
+            background: linear-gradient(to right, #ff00ff 25%, transparent 25%, transparent 50%, #00ffff 50%, #00ffff 75%, transparent 75%);
+            background-size: 20px 3px;
+            margin: 30px 0;
+            animation: divider-flow 2s infinite linear;
+        }
+
+        @keyframes divider-flow {
+            from { background-position: 0 0; }
+            to { background-position: -20px 0; }
+        }
+
+        .pixel-btn {
+            background-color: #ff00ff;
+            color: white !important;
+            border: 3px solid #6b006b;
+            font-size: 10px;
+            padding: 12px;
+            box-shadow: 
+                4px 4px 0 #6b006b,
+                inset -2px -2px 0 rgba(0, 0, 0, 0.3),
+                inset 2px 2px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.1s;
+            position: relative;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0 #6b006b;
+            margin-bottom: 15px;
+        }
+    
+        .pixel-btn:hover, .pixel-btn:focus {
+            transform: translate(2px, 2px);
+            box-shadow: 
+                2px 2px 0 #6b006b,
+                inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+                inset 1px 1px 0 rgba(255, 255, 255, 0.2);
+            background-color: #e600e6;
+        }
+    
+        .pixel-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 
+                0px 0px 0 #6b006b,
+                inset 2px 2px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .text-center .pixel-btn {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/" style="color: {{ header_data.brand_color|default:'#ff00ff' }} !important;">{{ header_data.site_name|default:"PIXSGAME" }}</a>
+            <div class="navbar-nav ms-auto">
+                {% for item in menu_items %}
+                    <a class="nav-link {% if request.path == item.url %}active{% endif %}" 
+                       href="{{ item.url }}" 
+                       {% if item.css_class %}style="{{ item.css_class }}"{% endif %}>
+                        {{ item.title }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="main-content">
+            {% block content %}
+            <div class="text-center">
+                <h3>ЛАСКАВО ПРОСИМО ДО PIXSGAME!</h3>
+                <p style="color: #00ffff; font-size: 10px; margin-top: 20px;">
+                    ЗАНУРТЕСЬ У СВІТ ПІКСЕЛЬНОГО МИСТЕЦТВА ТА НЕСКІНЧЕННИХ ПРИГОД.
+                </p>
+                <hr class="pixel-divider">
+            </div>
+
+            <div class="content-box">
+                <h4>ЩО ТАКЕ PIXSGAME?</h4>
+                <p>
+                    PIXSGAME - ЦЕ ПЛАТФОРМА, ДЕ ВИ МОЖЕТЕ СТВОРЮВАТИ СВОЇ ВЛАСНІ ПІКСЕЛЬНІ СВІТИ, СПІЛКУВАТИСЯ З ІНШИМИ ГРАВЦЯМИ ТА БРАТИ УЧАСТЬ В УНІКАЛЬНИХ ІГРОВИХ ПОДІЯХ. НАША МЕТА — ВІДРОДИТИ ЗОЛОТУ ДОБУ 8-БІТНИХ ІГОР СУЧАСНИМИ ІНСТРУМЕНТАМИ.
+                </p>
+            </div>
+
+            <div class="content-box">
+                <h4>РОЗПОЧНІТЬ СВОЮ ПРИГОДУ!</h4>
+                <p>
+                    ЗАРЕЄСТРУЙТЕСЬ ЗАРАЗ, ЩОБ ОТРИМАТИ ДОСТУП ДО ЕКСКЛЮЗИВНИХ ІНСТРУМЕНТІВ ДЛЯ СТВОРЕННЯ ПЕРСОНАЖІВ ТА ПОБУДОВИ СВОГО ПІКСЕЛЬНОГО БУДИНКУ. НЕ ПРОПУСТІТЬ ШАНС СТАТИ ЧАСТИНОЮ НАШОЇ РЕТРО-СПІЛЬНОТИ!
+                </p>
+                <div class="text-center">
+                    <a href="/users/register/" class="btn pixel-btn">ЗАРЕЄСТРУВАТИСЯ ЗАРАЗ</a>
+                </div>
+            </div>
+
+            <div class="text-center" style="margin-top: 30px;">
+                <p style="color: #aaaaaa; font-size: 9px;">
+                    © 2025 PIXSGAME. ВСІ ПРАВА ЗАХИЩЕНІ.<br>
+                    PIXEL POWERED BY FANTASY.
+                </p>
+            </div>
+            {% endblock %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

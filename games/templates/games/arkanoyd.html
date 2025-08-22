@@ -1,0 +1,490 @@
+{% extends 'users/base.html' %}
+
+{% block title %}
+Арканоїд - PIXSGAME
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="row">
+        <div class="col-lg-4 order-lg-1">
+            <div class="pixel-card mb-4">
+                <div class="pixel-header p-3">
+                    <h3>🏆 ЛІДЕРИ</h3>
+                </div>
+                <div class="p-4">
+                    {% if top_scores %}
+                        <ul class="list-unstyled">
+                            {% for score in top_scores %}
+                                <li class="d-flex justify-content-between mb-2">
+                                    <span>{{ forloop.counter }}. {{ score.user.username }}</span>
+                                    <strong>{{ score.score }}</strong>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-center">Таблиця лідерів поки порожня...</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="pixel-card">
+                <div class="pixel-header p-3">
+                    <h3>💬 КОМЕНТАРІ</h3>
+                </div>
+                <div class="p-4" style="height: 400px; overflow-y: auto;" id="comments-container">
+                    {% for comment in comments %}
+                    <div class="comment-item mb-3">
+                        <strong>{{ comment.user.username }}:</strong>
+                        <p class="mb-1">{{ comment.content }}</p>
+                        <small class="text-muted">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">Коментарів поки немає...</p>
+                    {% endfor %}
+                </div>
+                {% if user.is_authenticated %}
+                <div class="p-4 pt-0">
+                    <div class="input-group">
+                        <input type="text" id="comment-input" class="pixel-input form-control" placeholder="Написати коментар..." maxlength="500">
+                        <button class="pixel-btn" type="button" onclick="addComment()">Відправити</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-4 pt-0">
+                    <p class="text-center text-muted">
+                        <a href="{% url 'users:login' %}?next={% url 'games:arkanoid' %}">Увійдіть</a>, щоб залишити коментар
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-8 order-lg-2">
+            <div class="pixel-card">
+                <div class="pixel-header p-3">
+                    <h3>🧱 АРКАНОЇД</h3>
+                </div>
+                <div class="p-4 text-center">
+                    <style>
+                        /* Стили для игрового поля */
+                        #gameCanvas {
+                            background-color: #0d0d18;
+                            background-image: 
+                                linear-gradient(#2d2d44 1px, transparent 1px),
+                                linear-gradient(90deg, #2d2d44 1px, transparent 1px);
+                            background-size: 20px 20px;
+                        }
+
+                        /* Стили для пиксельных кнопок */
+                        .pixel-btn {
+                            background-color: #ff00ff;
+                            color: white !important;
+                            border: 3px solid #000;
+                            outline: 3px solid #ff00ff;
+                            outline-offset: -6px;
+                            font-family: 'Press Start 2P', cursive;
+                            font-size: 10px;
+                            padding: 12px;
+                            box-shadow: 
+                                4px 4px 0 #6b006b,
+                                inset -2px -2px 0 rgba(0, 0, 0, 0.3),
+                                inset 2px 2px 0 rgba(255, 255, 255, 0.2);
+                            transition: all 0.1s;
+                            position: relative;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            text-shadow: 1px 1px 0 #6b006b;
+                            margin: 0 5px;
+                        }
+                        .pixel-btn:hover, .pixel-btn:focus {
+                            transform: translate(2px, 2px);
+                            box-shadow: 
+                                2px 2px 0 #6b006b,
+                                inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+                                inset 1px 1px 0 rgba(255, 255, 255, 0.2);
+                            background-color: #e600e6;
+                        }
+                        .pixel-btn:active {
+                            transform: translate(4px, 4px);
+                            box-shadow: 
+                                0px 0px 0 #6b006b,
+                                inset 2px 2px 0 rgba(0, 0, 0, 0.3);
+                        }
+
+                        /* Стили для пиксельного поля ввода */
+                        .pixel-input {
+                            font-family: 'Press Start 2P', cursive;
+                            font-size: 14px;
+                            border: 3px solid #00ffff;
+                            background-color: #0f0f1a;
+                            color: white;
+                            border-radius: 0;
+                            padding: 15px;
+                            transition: all 0.3s;
+                            width: 100%;
+                            box-sizing: border-box;
+                        }
+                        .pixel-input:focus {
+                            outline: none;
+                            border-color: #ff00ff;
+                            box-shadow: 0 0 0 3px rgba(255, 0, 255, 0.3);
+                            animation: input-glow 1.5s infinite alternate;
+                        }
+                        @keyframes input-glow {
+                            0% { box-shadow: 0 0 0 3px rgba(255, 0, 255, 0.3); }
+                            100% { box-shadow: 0 0 0 6px rgba(255, 0, 255, 0.1); }
+                        }
+
+                        /* Стили для комментариев */
+                        .comment-item {
+                            border-left: 3px solid #00ffff;
+                            padding-left: 10px;
+                            margin-bottom: 15px;
+                        }
+                        .comment-item:hover {
+                            border-left-color: #ff00ff;
+                        }
+                    </style>
+                    <canvas id="gameCanvas" width="500" height="700" class="d-block mx-auto"></canvas>
+                    
+                    <div class="game-info mt-4">
+                        <div id="score" class="score">Рахунок: 0 | Життя: 3</div>
+                        <div class="controls mt-2">Керування: ← → або A D, Пробіл для запуску м'яча</div>
+                    </div>
+
+                    <div id="gameOverButtons" style="display: none;" class="mt-4">
+                        <button class="pixel-btn" onclick="saveScore()">Зберегти результат</button>
+                        <button class="pixel-btn" onclick="resetGame()">Почати заново</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Game variables
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const gameOverButtons = document.getElementById('gameOverButtons');
+    
+    let paddleX = canvas.width / 2 - 40;
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height - 100;
+    let ballDX = 4;
+    let ballDY = -4;
+    let ballMoving = false;
+    let bricks = [];
+    let score = 0;
+    let lives = 3;
+    let gameRunning = true;
+    let keys = {};
+    
+    const paddleWidth = 80;
+    const paddleHeight = 15;
+    const ballSize = 8;
+    const brickRows = 8;
+    const brickCols = 8; 
+    const brickWidth = 58; 
+    const brickHeight = 20;
+    let gameSpeed = 3;
+    
+    document.addEventListener('keydown', (e) => keys[e.code] = true);
+    document.addEventListener('keyup', (e) => keys[e.code] = false);
+    
+    function createBricks() {
+        bricks = [];
+        const horizontalOffset = (canvas.width - (brickCols * (brickWidth + 2) - 2)) / 2;
+        for (let row = 0; row < brickRows; row++) {
+            for (let col = 0; col < brickCols; col++) {
+                bricks.push({
+                    x: col * (brickWidth + 2) + horizontalOffset,
+                    y: row * (brickHeight + 2) + 30,
+                    alive: true,
+                    color: row % 5
+                });
+            }
+        }
+    }
+    
+    function update() {
+        if (!gameRunning) return;
+        
+        if (keys['ArrowLeft'] || keys['KeyA']) {
+            paddleX = Math.max(0, paddleX - 6);
+        }
+        if (keys['ArrowRight'] || keys['KeyD']) {
+            paddleX = Math.min(canvas.width - paddleWidth, paddleX + 6);
+        }
+        if (keys['Space'] && !ballMoving) {
+            ballMoving = true;
+            keys['Space'] = false;
+        }
+        
+        if (!ballMoving) {
+            ballX = paddleX + paddleWidth / 2;
+            return;
+        }
+        
+        ballX += ballDX * (gameSpeed / 3);
+        ballY += ballDY * (gameSpeed / 3);
+        
+        if (ballX <= ballSize || ballX >= canvas.width - ballSize) {
+            ballDX = -ballDX;
+        }
+        if (ballY <= ballSize) {
+            ballDY = -ballDY;
+        }
+        
+        if (ballY >= canvas.height - 80 && 
+            ballX >= paddleX && ballX <= paddleX + paddleWidth) {
+            ballDY = -ballDY;
+            const hitPos = (ballX - paddleX) / paddleWidth;
+            ballDX = (hitPos - 0.5) * 8;
+        }
+        
+        if (ballY > canvas.height) {
+            lives--;
+            scoreElement.textContent = `Рахунок: ${score} | Життя: ${lives}`;
+            if (lives <= 0) {
+                gameOver();
+            } else {
+                resetBall();
+            }
+        }
+        
+        for (let i = bricks.length - 1; i >= 0; i--) {
+            if (!bricks[i].alive) continue;
+            
+            if (ballX + ballSize > bricks[i].x && 
+                ballX - ballSize < bricks[i].x + brickWidth &&
+                ballY + ballSize > bricks[i].y && 
+                ballY - ballSize < bricks[i].y + brickHeight) {
+                
+                bricks[i].alive = false;
+                ballDY = -ballDY;
+                score += 10;
+                scoreElement.textContent = `Рахунок: ${score} | Життя: ${lives}`;
+                
+                if (bricks.filter(b => b.alive).length === 0) {
+                    nextLevel();
+                }
+                break;
+            }
+        }
+    }
+    
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height); 
+        
+        const colors = ['#ff0000', '#ff8800', '#ffff00', '#00ff00', '#0088ff'];
+        const shadowColors = ['#8b0000', '#8b4b00', '#8b8b00', '#008b00', '#004b8b'];
+        
+        bricks.forEach(brick => {
+            if (brick.alive) {
+                // Тень и обводка
+                ctx.fillStyle = shadowColors[brick.color];
+                ctx.fillRect(brick.x + 2, brick.y + 2, brickWidth, brickHeight);
+
+                // Основной цвет кирпича
+                ctx.fillStyle = colors[brick.color];
+                ctx.fillRect(brick.x, brick.y, brickWidth, brickHeight);
+
+                // Блик
+                ctx.fillStyle = '#ffffff33'; // Полупрозрачный белый
+                ctx.fillRect(brick.x + 2, brick.y + 2, brickWidth - 4, brickHeight - 4);
+            }
+        });
+        
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(paddleX, canvas.height - 65, paddleWidth, paddleHeight);
+        ctx.fillStyle = '#00aa00';
+        ctx.fillRect(paddleX + 5, canvas.height - 60, paddleWidth - 10, paddleHeight - 10);
+        
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(ballX - ballSize/2, ballY - ballSize/2, ballSize, ballSize);
+        
+        if (!ballMoving) {
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px Press Start 2P';
+            ctx.textAlign = 'center';
+            ctx.fillText('Пробіл для запуску', canvas.width/2, canvas.height/2);
+        }
+    }
+    
+    function resetBall() {
+        ballX = paddleX + paddleWidth / 2;
+        ballY = canvas.height - 100;
+        ballDX = (Math.random() > 0.5 ? 1 : -1) * 4;
+        ballDY = -4;
+        ballMoving = false;
+    }
+    
+    function nextLevel() {
+        createBricks();
+        resetBall();
+        gameSpeed += 0.5;
+    }
+    
+    function gameOver() {
+        gameRunning = false;
+        ctx.fillStyle = '#ff0000';
+        ctx.font = '24px Press Start 2P';
+        ctx.textAlign = 'center';
+        ctx.fillText('ГРУ ЗАКІНЧЕНО!', canvas.width/2, canvas.height/2);
+        ctx.fillText(`Рахунок: ${score}`, canvas.width/2, canvas.height/2 + 40);
+        gameOverButtons.style.display = 'block';
+    }
+    
+    function resetGame() {
+        score = 0;
+        lives = 3;
+        gameRunning = true;
+        gameSpeed = 3;
+        createBricks();
+        resetBall();
+        scoreElement.textContent = `Рахунок: ${score} | Життя: ${lives}`;
+        gameOverButtons.style.display = 'none';
+    }
+
+    function saveScore() {
+        const scoreData = {
+            game_name: 'arkanoid',
+            score: score,
+            level: 1 // You can adjust this based on your game logic
+        };
+
+        fetch('/games/save-score/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}' // Include CSRF token for security
+            },
+            body: JSON.stringify(scoreData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Результат збережено!');
+            } else {
+                alert('Помилка при збереженні результату: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            alert('Помилка при збереженні результату.');
+        });
+    }
+
+    // Comments functionality
+    function addComment() {
+        const commentInput = document.getElementById('comment-input');
+        const content = commentInput.value.trim();
+        
+        if (!content) {
+            alert('Введіть коментар!');
+            return;
+        }
+
+        const commentData = {
+            game_name: 'arkanoid',
+            content: content
+        };
+
+        fetch('/games/save-comment/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(commentData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Add new comment to the list
+                const commentsContainer = document.getElementById('comments-container');
+                const newComment = document.createElement('div');
+                newComment.className = 'comment-item mb-3';
+                newComment.innerHTML = `
+                    <strong>${data.comment.username}:</strong>
+                    <p class="mb-1">${data.comment.content}</p>
+                    <small class="text-muted">${data.comment.created_at}</small>
+                `;
+                
+                // Insert at the top
+                const firstComment = commentsContainer.firstElementChild;
+                if (firstComment && firstComment.tagName === 'P') {
+                    commentsContainer.innerHTML = '';
+                }
+                commentsContainer.insertBefore(newComment, commentsContainer.firstChild);
+                
+                // Clear input
+                commentInput.value = '';
+            } else {
+                alert('Помилка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            alert('Помилка при відправці коментаря.');
+        });
+    }
+
+    // Load comments periodically
+    function loadComments() {
+        fetch('/games/get-comments/arkanoid/')
+        .then(response => response.json())
+        .then(data => {
+            const commentsContainer = document.getElementById('comments-container');
+            commentsContainer.innerHTML = '';
+            
+            if (data.comments.length === 0) {
+                commentsContainer.innerHTML = '<p class="text-muted">Коментарів поки немає...</p>';
+                return;
+            }
+            
+            data.comments.forEach(comment => {
+                const commentDiv = document.createElement('div');
+                commentDiv.className = 'comment-item mb-3';
+                commentDiv.innerHTML = `
+                    <strong>${comment.username}:</strong>
+                    <p class="mb-1">${comment.content}</p>
+                    <small class="text-muted">${comment.created_at}</small>
+                `;
+                commentsContainer.appendChild(commentDiv);
+            });
+        })
+        .catch(error => {
+            console.error('Помилка завантаження коментарів:', error);
+        });
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyR' && !gameRunning) {
+            resetGame();
+        }
+    });
+
+    // Allow Enter key to submit comment
+    document.getElementById('comment-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            addComment();
+        }
+    });
+    
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+    
+    createBricks();
+    gameLoop();
+    
+    // Refresh comments every 30 seconds
+    setInterval(loadComments, 30000);
+</script>
+{% endblock %}

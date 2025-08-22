@@ -1,0 +1,464 @@
+{% extends 'users/base.html' %}
+
+{% block title %}
+Бігун - PIXSGAME
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="row">
+        <div class="col-lg-4 order-lg-1">
+            <div class="pixel-card mb-4">
+                <div class="pixel-header p-3">
+                    <h3>🏆 ЛІДЕРИ</h3>
+                </div>
+                <div class="p-4">
+                    {% if top_scores %}
+                        <ul class="list-unstyled">
+                            {% for score in top_scores %}
+                                <li class="d-flex justify-content-between mb-2">
+                                    <span>{{ forloop.counter }}. {{ score.user.username }}</span>
+                                    <strong>{{ score.score }}</strong>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-center">Таблиця лідерів поки порожня...</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="pixel-card">
+                <div class="pixel-header p-3">
+                    <h3>💬 КОМЕНТАРІ</h3>
+                </div>
+                <div class="p-4" style="height: 400px; overflow-y: auto;" id="comments-container">
+                    {% for comment in comments %}
+                    <div class="comment-item mb-3">
+                        <strong>{{ comment.user.username }}:</strong>
+                        <p class="mb-1">{{ comment.content }}</p>
+                        <small class="text-muted">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">Коментарів поки немає...</p>
+                    {% endfor %}
+                </div>
+                {% if user.is_authenticated %}
+                <div class="p-4 pt-0">
+                    <div class="input-group">
+                        <input type="text" id="comment-input" class="pixel-input form-control" placeholder="Написати коментар..." maxlength="500">
+                        <button class="pixel-btn" type="button" onclick="addComment()">Відправити</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-4 pt-0">
+                    <p class="text-center text-muted">
+                        <a href="{% url 'users:login' %}?next={% url 'games:runner' %}">Увійдіть</a>, щоб залишити коментар
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-8 order-lg-2">
+            <div class="pixel-card">
+                <div class="pixel-header p-3">
+                    <h3>🏃 БІГУН</h3>
+                </div>
+                <div class="p-4 text-center">
+                    <style>
+                        /* Стили для игрового поля */
+                        #gameCanvas {
+                            border: 3px solid #fff;
+                            background: #87ceeb;
+                            image-rendering: pixelated;
+                            image-rendering: -moz-crisp-edges;
+                            image-rendering: crisp-edges;
+                            box-shadow: 0 0 20px #ffffff50;
+                        }
+
+                        /* Стили для пиксельных кнопок */
+                        .pixel-btn {
+                            background-color: #ff00ff;
+                            color: white !important;
+                            border: 3px solid #000;
+                            outline: 3px solid #ff00ff;
+                            outline-offset: -6px;
+                            font-family: 'Press Start 2P', cursive;
+                            font-size: 10px;
+                            padding: 12px;
+                            box-shadow: 
+                                4px 4px 0 #6b006b,
+                                inset -2px -2px 0 rgba(0, 0, 0, 0.3),
+                                inset 2px 2px 0 rgba(255, 255, 255, 0.2);
+                            transition: all 0.1s;
+                            position: relative;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            text-shadow: 1px 1px 0 #6b006b;
+                            margin: 0 5px;
+                        }
+                        .pixel-btn:hover, .pixel-btn:focus {
+                            transform: translate(2px, 2px);
+                            box-shadow: 
+                                2px 2px 0 #6b006b,
+                                inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+                                inset 1px 1px 0 rgba(255, 255, 255, 0.2);
+                            background-color: #e600e6;
+                        }
+                        .pixel-btn:active {
+                            transform: translate(4px, 4px);
+                            box-shadow: 
+                                0px 0px 0 #6b006b,
+                                inset 2px 2px 0 rgba(0, 0, 0, 0.3);
+                        }
+
+                        /* Стили для пиксельного поля ввода */
+                        .pixel-input {
+                            font-family: 'Press Start 2P', cursive;
+                            font-size: 14px;
+                            border: 3px solid #00ffff;
+                            background-color: #0f0f1a;
+                            color: white;
+                            border-radius: 0;
+                            padding: 15px;
+                            transition: all 0.3s;
+                            width: 100%;
+                            box-sizing: border-box;
+                        }
+                        .pixel-input:focus {
+                            outline: none;
+                            border-color: #ff00ff;
+                            box-shadow: 0 0 0 3px rgba(255, 0, 255, 0.3);
+                            animation: input-glow 1.5s infinite alternate;
+                        }
+                        @keyframes input-glow {
+                            0% { box-shadow: 0 0 0 3px rgba(255, 0, 255, 0.3); }
+                            100% { box-shadow: 0 0 0 6px rgba(255, 0, 255, 0.1); }
+                        }
+                    </style>
+                    <canvas id="gameCanvas" width="600" height="300"></canvas>
+                    
+                    <div class="game-info mt-4">
+                        <div id="score" class="score">Дистанція: 0м</div>
+                        <div class="controls mt-2">Керування: Пробіл для стрибка, ↓ для підкату</div>
+                    </div>
+
+                    <div id="gameOverButtons" style="display: none;" class="mt-4">
+                        <button class="pixel-btn" onclick="saveScore()">Зберегти результат</button>
+                        <button class="pixel-btn" onclick="resetGame()">Почати заново</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const gameOverButtons = document.getElementById('gameOverButtons');
+    
+    let playerX = 100;
+    let playerY = canvas.height - 80;
+    let playerVelY = 0;
+    let isJumping = false;
+    let isSliding = false;
+    let obstacles = [];
+    let distance = 0;
+    let gameSpeed = 3;
+    let gameRunning = true;
+    let keys = {};
+    let frame = 0;
+    
+    const gravity = 0.8;
+    const jumpPower = -15;
+    const groundY = canvas.height - 80;
+    const playerWidth = 20;
+    const playerHeight = 40;
+    
+    document.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if (e.code === 'Space') e.preventDefault();
+    });
+    document.addEventListener('keyup', (e) => keys[e.code] = false);
+    
+    function spawnObstacle() {
+        if (frame % Math.max(60, 120 - Math.floor(gameSpeed)) === 0 && Math.random() < 0.8) {
+            const types = ['low', 'high', 'bird'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            let obstacleData = {};
+            switch(type) {
+                case 'low':
+                    obstacleData = {
+                        x: canvas.width,
+                        y: groundY,
+                        width: 25,
+                        height: 40,
+                        type: 'low',
+                        color: '#8b4513'
+                    };
+                    break;
+                case 'high':
+                    obstacleData = {
+                        x: canvas.width,
+                        y: groundY - 60,
+                        width: 30,
+                        height: 30,
+                        type: 'high',
+                        color: '#654321'
+                    };
+                    break;
+                case 'bird':
+                    obstacleData = {
+                        x: canvas.width,
+                        y: groundY - 80,
+                        width: 20,
+                        height: 15,
+                        type: 'bird',
+                        color: '#800080'
+                    };
+                    break;
+            }
+            obstacles.push(obstacleData);
+        }
+    }
+    
+    function update() {
+        if (!gameRunning) return;
+        
+        frame++;
+        distance += gameSpeed;
+        gameSpeed += 0.005;
+        
+        if ((keys['Space'] || keys['ArrowUp']) && !isJumping) {
+            playerVelY = jumpPower;
+            isJumping = true;
+        }
+        
+        isSliding = keys['ArrowDown'] || keys['KeyS'];
+        
+        playerVelY += gravity;
+        playerY += playerVelY;
+        
+        if (playerY >= groundY) {
+            playerY = groundY;
+            playerVelY = 0;
+            isJumping = false;
+        }
+        
+        spawnObstacle();
+        
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            obstacles[i].x -= gameSpeed;
+            
+            if (obstacles[i].x + obstacles[i].width < 0) {
+                obstacles.splice(i, 1);
+                continue;
+            }
+            
+            const currentPlayerHeight = isSliding ? playerHeight / 2 : playerHeight;
+            const currentPlayerY = isSliding ? playerY + playerHeight / 2 : playerY;
+            
+            if (playerX + playerWidth > obstacles[i].x && 
+                playerX < obstacles[i].x + obstacles[i].width &&
+                currentPlayerY + currentPlayerHeight > obstacles[i].y && 
+                currentPlayerY < obstacles[i].y + obstacles[i].height) {
+                gameOver();
+                return;
+            }
+        }
+        
+        scoreElement.textContent = `Дистанція: ${Math.floor(distance/10)}м`;
+    }
+    
+    function draw() {
+        ctx.fillStyle = '#87ceeb';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#32cd32';
+        ctx.fillRect(0, groundY + 40, canvas.width, canvas.height - groundY - 40);
+        
+        for (let i = 0; i < canvas.width; i += 40) {
+            ctx.fillStyle = '#228b22';
+            ctx.fillRect(i - (distance % 40), groundY + 35, 20, 10);
+        }
+        
+        ctx.fillStyle = '#ffff0050';
+        const sunX = canvas.width - 60;
+        const sunY = 40;
+        ctx.fillRect(sunX, sunY, 30, 30);
+        
+        const currentPlayerHeight = isSliding ? playerHeight / 2 : playerHeight;
+        const currentPlayerY = isSliding ? playerY + playerHeight / 2 : playerY;
+        
+        ctx.fillStyle = '#ff6b35';
+        ctx.fillRect(playerX, currentPlayerY, playerWidth, currentPlayerHeight);
+        ctx.fillStyle = '#ff8c42';
+        ctx.fillRect(playerX + 3, currentPlayerY + 3, playerWidth - 6, currentPlayerHeight - 6);
+        
+        if (isSliding) {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(playerX + 8, currentPlayerY + 8, 3, 3);
+            ctx.fillRect(playerX + 14, currentPlayerY + 8, 3, 3);
+        } else {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(playerX + 12, currentPlayerY + 8, 3, 3);
+            
+            const legOffset = Math.sin(frame * 0.3) * 3;
+            ctx.fillStyle = '#ff6b35';
+            ctx.fillRect(playerX + 5, currentPlayerY + currentPlayerHeight, 3, 8 + legOffset);
+            ctx.fillRect(playerX + 12, currentPlayerY + currentPlayerHeight, 3, 8 - legOffset);
+        }
+        
+        obstacles.forEach(obstacle => {
+            ctx.fillStyle = obstacle.color;
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            
+            if (obstacle.type === 'bird') {
+                const wingFlap = Math.sin(frame * 0.5) > 0;
+                if (wingFlap) {
+                    ctx.fillRect(obstacle.x - 5, obstacle.y + 3, 8, 4);
+                    ctx.fillRect(obstacle.x + obstacle.width - 3, obstacle.y + 3, 8, 4);
+                }
+            } else {
+                ctx.fillStyle = obstacle.type === 'low' ? '#654321' : '#8b7355';
+                ctx.fillRect(obstacle.x + 2, obstacle.y + 2, obstacle.width - 4, obstacle.height - 4);
+            }
+        });
+    }
+    
+    function gameOver() {
+        gameRunning = false;
+        gameOverButtons.style.display = 'block';
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = '24px Press Start 2P';
+        ctx.textAlign = 'center';
+        ctx.fillText('ГРУ ЗАКІНЧЕНО!', canvas.width / 2, canvas.height / 2 - 40);
+        ctx.fillText(`Дистанція: ${Math.floor(distance/10)}м`, canvas.width / 2, canvas.height / 2);
+    }
+    
+    function resetGame() {
+        playerY = groundY;
+        playerVelY = 0;
+        isJumping = false;
+        isSliding = false;
+        obstacles = [];
+        distance = 0;
+        gameSpeed = 3;
+        gameRunning = true;
+        frame = 0;
+        scoreElement.textContent = 'Дистанція: 0м';
+        gameOverButtons.style.display = 'none';
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyR' && !gameRunning) {
+            resetGame();
+        }
+    });
+
+    function saveScore() {
+        const scoreData = {
+            game_name: 'runner',
+            score: Math.floor(distance/10),
+            level: 1
+        };
+
+        fetch('/games/save-score/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(scoreData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Результат збережено!');
+            } else {
+                alert('Помилка при збереженні результату: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            alert('Помилка при збереженні результату.');
+        });
+    }
+    
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+    
+    gameLoop();
+
+    // Comments functionality
+    function addComment() {
+        const commentInput = document.getElementById('comment-input');
+        const content = commentInput.value.trim();
+        
+        if (!content) {
+            alert('Введіть коментар!');
+            return;
+        }
+
+        const commentData = {
+            game_name: 'runner',
+            content: content
+        };
+
+        fetch('/games/save-comment/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(commentData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const commentsContainer = document.getElementById('comments-container');
+                const newComment = document.createElement('div');
+                newComment.className = 'comment-item mb-3';
+                newComment.innerHTML = `
+                    <strong>${data.comment.username}:</strong>
+                    <p class="mb-1">${data.comment.content}</p>
+                    <small class="text-muted">${data.comment.created_at}</small>
+                `;
+                
+                const firstComment = commentsContainer.firstElementChild;
+                if (firstComment && firstComment.tagName === 'P') {
+                    commentsContainer.innerHTML = '';
+                }
+                commentsContainer.insertBefore(newComment, commentsContainer.firstChild);
+                
+                commentInput.value = '';
+            } else {
+                alert('Помилка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            alert('Помилка при відправці коментаря.');
+        });
+    }
+
+    // Allow Enter key to submit comment
+    if (document.getElementById('comment-input')) {
+        document.getElementById('comment-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addComment();
+            }
+        });
+    }
+
+</script>
+{% endblock %}

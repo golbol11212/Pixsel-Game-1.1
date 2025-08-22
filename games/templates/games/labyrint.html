@@ -1,0 +1,406 @@
+{% extends 'users/base.html' %}
+
+{% block title %}
+Лабіринт - PIXSGAME
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="row">
+        <div class="col-lg-4 order-lg-1">
+            <div class="pixel-card mb-4">
+                <div class="pixel-header p-3">
+                    <h3>🏆 ЛІДЕРИ</h3>
+                </div>
+                <div class="p-4">
+                    {% if top_scores %}
+                        <ul class="list-unstyled">
+                            {% for score in top_scores %}
+                                <li class="d-flex justify-content-between mb-2">
+                                    <span>{{ forloop.counter }}. {{ score.user.username }}</span>
+                                    <strong>{{ score.score }}</strong>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-center">Таблиця лідерів поки порожня...</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="pixel-card">
+                <div class="pixel-header p-3">
+                    <h3>💬 КОМЕНТАРІ</h3>
+                </div>
+                <div class="p-4" style="height: 400px; overflow-y: auto;" id="comments-container">
+                    {% for comment in comments %}
+                    <div class="comment-item mb-3">
+                        <strong>{{ comment.user.username }}:</strong>
+                        <p class="mb-1">{{ comment.content }}</p>
+                        <small class="text-muted">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">Коментарів поки немає...</p>
+                    {% endfor %}
+                </div>
+                {% if user.is_authenticated %}
+                <div class="p-4 pt-0">
+                    <div class="input-group">
+                        <input type="text" id="comment-input" class="pixel-input form-control" placeholder="Написати коментар..." maxlength="500">
+                        <button class="pixel-btn" type="button" onclick="addComment()">Відправити</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-4 pt-0">
+                    <p class="text-center text-muted">
+                        <a href="{% url 'users:login' %}?next={% url 'games:labyrint' %}">Увійдіть</a>, щоб залишити коментар
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-8 order-lg-2">
+            <div class="pixel-card">
+                <div class="pixel-header p-3">
+                    <h3>🌀 ЛАБІРИНТ</h3>
+                </div>
+                <div class="p-4 text-center">
+                    <style>
+                        /* Стили для игрового поля */
+                        #gameCanvas {
+                            border: 3px solid #ffaa00;
+                            background: #000;
+                            image-rendering: pixelated;
+                            image-rendering: -moz-crisp-edges;
+                            image-rendering: crisp-edges;
+                            box-shadow: 0 0 20px #ffaa0050;
+                        }
+
+                        /* Стили для пиксельных кнопок */
+                        .pixel-btn {
+                            background-color: #ff00ff;
+                            color: white !important;
+                            border: 3px solid #000;
+                            outline: 3px solid #ff00ff;
+                            outline-offset: -6px;
+                            font-family: 'Press Start 2P', cursive;
+                            font-size: 10px;
+                            padding: 12px;
+                            box-shadow: 
+                                4px 4px 0 #6b006b,
+                                inset -2px -2px 0 rgba(0, 0, 0, 0.3),
+                                inset 2px 2px 0 rgba(255, 255, 255, 0.2);
+                            transition: all 0.1s;
+                            position: relative;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            text-shadow: 1px 1px 0 #6b006b;
+                            margin: 0 5px;
+                        }
+                        .pixel-btn:hover, .pixel-btn:focus {
+                            transform: translate(2px, 2px);
+                            box-shadow: 
+                                2px 2px 0 #6b006b,
+                                inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+                                inset 1px 1px 0 rgba(255, 255, 255, 0.2);
+                            background-color: #e600e6;
+                        }
+                        .pixel-btn:active {
+                            transform: translate(4px, 4px);
+                            box-shadow: 
+                                0px 0px 0 #6b006b,
+                                inset 2px 2px 0 rgba(0, 0, 0, 0.3);
+                        }
+
+                        /* Стили для пиксельного поля ввода */
+                        .pixel-input {
+                            font-family: 'Press Start 2P', cursive;
+                            font-size: 14px;
+                            border: 3px solid #00ffff;
+                            background-color: #0f0f1a;
+                            color: white;
+                            border-radius: 0;
+                            padding: 15px;
+                            transition: all 0.3s;
+                            width: 100%;
+                            box-sizing: border-box;
+                        }
+                        .pixel-input:focus {
+                            outline: none;
+                            border-color: #ff00ff;
+                            box-shadow: 0 0 0 3px rgba(255, 0, 255, 0.3);
+                            animation: input-glow 1.5s infinite alternate;
+                        }
+                        @keyframes input-glow {
+                            0% { box-shadow: 0 0 0 3px rgba(255, 0, 255, 0.3); }
+                            100% { box-shadow: 0 0 0 6px rgba(255, 0, 255, 0.1); }
+                        }
+                    </style>
+                    <canvas id="gameCanvas" width="400" height="400"></canvas>
+                    
+                    <div class="game-info mt-4">
+                        <div id="score" class="score">Рівень: 1 | Час: 0</div>
+                        <div class="controls mt-2">Керування: ← → ↑ ↓ або WASD</div>
+                    </div>
+                    <div class="mt-4">
+                         <button class="pixel-btn" onclick="gameOver()">Завершити та зберегти</button>
+                    </div>
+
+                    <div id="gameOverButtons" style="display: none;" class="mt-4">
+                        <button class="pixel-btn" onclick="resetGame()">Почати заново</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const gameOverButtons = document.getElementById('gameOverButtons');
+    
+    const tileSize = 20;
+    const cols = canvas.width / tileSize;
+    const rows = canvas.height / tileSize;
+    
+    let playerX = 1;
+    let playerY = 1;
+    let exitX = cols - 2;
+    let exitY = rows - 2;
+    let level = 1;
+    let gameTime = 0;
+    let gameRunning = true;
+    let keys = {};
+    let maze = [];
+    
+    document.addEventListener('keydown', (e) => keys[e.code] = true);
+    document.addEventListener('keyup', (e) => keys[e.code] = false);
+    
+    function generateMaze() {
+        maze = [];
+        for (let y = 0; y < rows; y++) {
+            maze[y] = [];
+            for (let x = 0; x < cols; x++) {
+                maze[y][x] = Math.random() < 0.3 ? 1 : 0;
+            }
+        }
+        
+        maze[1][1] = 0;
+        maze[exitY][exitX] = 0;
+        
+        for (let i = 0; i < 10; i++) {
+            const x = Math.floor(Math.random() * (cols - 2)) + 1;
+            const y = Math.floor(Math.random() * (rows - 2)) + 1;
+            maze[y][x] = 0;
+        }
+    }
+    
+    function canMove(x, y) {
+        return x >= 0 && x < cols && y >= 0 && y < rows && maze[y][x] === 0;
+    }
+    
+    function update() {
+        if (!gameRunning) return;
+        
+        let newX = playerX;
+        let newY = playerY;
+        
+        if (keys['ArrowLeft'] || keys['KeyA']) {
+            newX = playerX - 1;
+            keys['ArrowLeft'] = keys['KeyA'] = false;
+        }
+        if (keys['ArrowRight'] || keys['KeyD']) {
+            newX = playerX + 1;
+            keys['ArrowRight'] = keys['KeyD'] = false;
+        }
+        if (keys['ArrowUp'] || keys['KeyW']) {
+            newY = playerY - 1;
+            keys['ArrowUp'] = keys['KeyW'] = false;
+        }
+        if (keys['ArrowDown'] || keys['KeyS']) {
+            newY = playerY + 1;
+            keys['ArrowDown'] = keys['KeyS'] = false;
+        }
+        
+        if (canMove(newX, newY)) {
+            playerX = newX;
+            playerY = newY;
+        }
+        
+        if (playerX === exitX && playerY === exitY) {
+            level++;
+            playerX = 1;
+            playerY = 1;
+            exitX = cols - 2;
+            exitY = rows - 2;
+            generateMaze();
+        }
+    }
+    
+    function draw() {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                if (maze[y][x] === 1) {
+                    ctx.fillStyle = '#8b4513';
+                    ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                    ctx.fillStyle = '#a0522d';
+                    ctx.fillRect(x * tileSize + 2, y * tileSize + 2, tileSize - 4, tileSize - 4);
+                }
+            }
+        }
+        
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(playerX * tileSize + 2, playerY * tileSize + 2, tileSize - 4, tileSize - 4);
+        ctx.fillStyle = '#00aa00';
+        ctx.fillRect(playerX * tileSize + 6, playerY * tileSize + 6, tileSize - 12, tileSize - 12);
+        
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(exitX * tileSize + 2, exitY * tileSize + 2, tileSize - 4, tileSize - 4);
+        ctx.fillStyle = '#ff4444';
+        ctx.fillRect(exitX * tileSize + 6, exitY * tileSize + 6, tileSize - 12, tileSize - 12);
+    }
+    
+    function gameOver() {
+        gameRunning = false;
+        saveScore();
+        gameOverButtons.style.display = 'block';
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = '24px Press Start 2P';
+        ctx.textAlign = 'center';
+        ctx.fillText('ГРУ ЗАКІНЧЕНО!', canvas.width / 2, canvas.height / 2 - 40);
+        ctx.fillText(`Рахунок: ${level * 1000 - gameTime}`, canvas.width / 2, canvas.height / 2);
+    }
+    
+    function resetGame() {
+        playerX = 1;
+        playerY = 1;
+        level = 1;
+        gameTime = 0;
+        gameRunning = true;
+        generateMaze();
+        gameOverButtons.style.display = 'none';
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyR' && !gameRunning) {
+            resetGame();
+        }
+    });
+
+    function saveScore() {
+        const score = level * 1000 - gameTime;
+        const scoreData = {
+            game_name: 'labyrint',
+            score: score > 0 ? score : 0,
+            level: level
+        };
+
+        fetch('/games/save-score/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(scoreData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Результат збережено!');
+            } else {
+                alert('Помилка при збереженні результату: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            alert('Помилка при збереженні результату.');
+        });
+    }
+    
+    setInterval(() => {
+        if (gameRunning) {
+            gameTime++;
+            scoreElement.textContent = `Рівень: ${level} | Час: ${gameTime}`;
+        }
+    }, 1000);
+    
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+    
+    generateMaze();
+    gameLoop();
+
+    // Comments functionality
+    function addComment() {
+        const commentInput = document.getElementById('comment-input');
+        const content = commentInput.value.trim();
+        
+        if (!content) {
+            alert('Введіть коментар!');
+            return;
+        }
+
+        const commentData = {
+            game_name: 'labyrint',
+            content: content
+        };
+
+        fetch('/games/save-comment/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(commentData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const commentsContainer = document.getElementById('comments-container');
+                const newComment = document.createElement('div');
+                newComment.className = 'comment-item mb-3';
+                newComment.innerHTML = `
+                    <strong>${data.comment.username}:</strong>
+                    <p class="mb-1">${data.comment.content}</p>
+                    <small class="text-muted">${data.comment.created_at}</small>
+                `;
+                
+                const firstComment = commentsContainer.firstElementChild;
+                if (firstComment && firstComment.tagName === 'P') {
+                    commentsContainer.innerHTML = '';
+                }
+                commentsContainer.insertBefore(newComment, commentsContainer.firstChild);
+                
+                commentInput.value = '';
+            } else {
+                alert('Помилка: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Помилка:', error);
+            alert('Помилка при відправці коментаря.');
+        });
+    }
+
+    // Allow Enter key to submit comment
+    if (document.getElementById('comment-input')) {
+        document.getElementById('comment-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addComment();
+            }
+        });
+    }
+
+</script>
+{% endblock %}

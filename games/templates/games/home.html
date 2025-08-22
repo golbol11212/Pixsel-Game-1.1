@@ -1,0 +1,155 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Вибір гри - PIXSGAME{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <h3 class="mb-4 text-center">🕹️ ОБЕРІТЬ ГРУ</h3>
+    <hr class="pixel-divider mb-5">
+
+    <div class="row g-4">
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'games:arkanoid' %}" class="game-card-link">
+                <div class="game-card">
+                    <div class="game-card-icon">🧱</div>
+                    <h5 class="game-card-title">Арканоїд</h5>
+                    <p class="game-card-description">Найкращий рахунок: {% if top_scores.arkanoid %}{{ top_scores.arkanoid.score }}{% else %}N/A{% endif %}</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'games:tetris' %}" class="game-card-link">
+                <div class="game-card">
+                    <div class="game-card-icon">🟦</div>
+                    <h5 class="game-card-title">Тетріс</h5>
+                    <p class="game-card-description">Найкращий рахунок: {% if top_scores.tetris %}{{ top_scores.tetris.score }}{% else %}N/A{% endif %}</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'games:snake' %}" class="game-card-link">
+                <div class="game-card">
+                    <div class="game-card-icon">🐍</div>
+                    <h5 class="game-card-title">Змійка</h5>
+                    <p class="game-card-description">Найкращий рахунок: {% if top_scores.snake %}{{ top_scores.snake.score }}{% else %}N/A{% endif %}</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'games:space_shooter' %}" class="game-card-link">
+                <div class="game-card">
+                    <div class="game-card-icon">👾</div>
+                    <h5 class="game-card-title">Космічний шутер</h5>
+                    <p class="game-card-description">Найкращий рахунок: {% if top_scores.space_shooter %}{{ top_scores.space_shooter.score }}{% else %}N/A{% endif %}</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'games:flappy_bird' %}" class="game-card-link">
+                <div class="game-card">
+                    <div class="game-card-icon">🐦</div>
+                    <h5 class="game-card-title">Flappy Bird</h5>
+                    <p class="game-card-description">Найкращий рахунок: {% if top_scores.flappy_bird %}{{ top_scores.flappy_bird.score }}{% else %}N/A{% endif %}</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'games:ping_pong' %}" class="game-card-link">
+                <div class="game-card">
+                    <div class="game-card-icon">🏓</div>
+                    <h5 class="game-card-title">Пінг-Понг</h5>
+                    <p class="game-card-description">Найкращий рахунок: {% if top_scores.ping_pong %}{{ top_scores.ping_pong.score }}{% else %}N/A{% endif %}</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'games:coinrunner' %}" class="game-card-link">
+                <div class="game-card">
+                    <div class="game-card-icon">🪙</div>
+                    <h5 class="game-card-title">Збір Монет</h5>
+                    <p class="game-card-description">Найкращий рахунок: {% if top_scores.coinrunner %}{{ top_scores.coinrunner.score }}{% else %}N/A{% endif %}</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'games:runner' %}" class="game-card-link">
+                <div class="game-card">
+                    <div class="game-card-icon">🏃</div>
+                    <h5 class="game-card-title">Бігун</h5>
+                    <p class="game-card-description">Найкращий рахунок: {% if top_scores.runner %}{{ top_scores.runner.score }}{% else %}N/A{% endif %}</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'games:labyrint' %}" class="game-card-link">
+                <div class="game-card">
+                    <div class="game-card-icon">🌀</div>
+                    <h5 class="game-card-title">Лабіринт</h5>
+                    <p class="game-card-description">Найкращий рахунок: {% if top_scores.labyrint %}{{ top_scores.labyrint.score }}{% else %}N/A{% endif %}</p>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <a href="{% url 'games:base_defender' %}" class="game-card-link">
+                <div class="game-card">
+                    <div class="game-card-icon">🛡️</div>
+                    <h5 class="game-card-title">Захист Бази</h5>
+                    <p class="game-card-description">Найкращий рахунок: {% if top_scores.base_defender %}{{ top_scores.base_defender.score }}{% else %}N/A{% endif %}</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .game-card-link {
+        text-decoration: none;
+    }
+    .game-card {
+        border: 3px solid #00ffff;
+        padding: 20px;
+        background-color: #1a1a2e;
+        text-align: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .game-card:hover {
+        transform: translateY(-5px) rotate(1deg);
+        box-shadow: 0 0 20px #00ffff80;
+        border-color: #ff00ff;
+    }
+    .game-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%),
+                    linear-gradient(-45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%);
+        background-size: 10px 10px;
+        opacity: 0.5;
+        pointer-events: none;
+    }
+    .game-card-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+    .game-card-title {
+        color: #ff00ff;
+        text-shadow: 2px 2px 0 #6b006b;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    .game-card-description {
+        color: #aaaaaa;
+        font-size: 10px;
+    }
+</style>
+{% endblock %}
