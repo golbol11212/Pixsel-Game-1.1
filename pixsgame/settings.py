@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-$66hfsqrlx&f_gw_896t-=z-g**fr7cz_=+am(b1i596-q8hzh
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['golbol112.pythonanywhere.com']
+ALLOWED_HOSTS = ['golbol112.pythonanywhere.com', '127.0.0.1']
 
 
 # Application definition
@@ -58,7 +58,7 @@ ROOT_URLCONF = 'pixsgame.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

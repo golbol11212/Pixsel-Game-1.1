@@ -1,0 +1,24 @@
+/* Existing styles... */
+
+.leaderboard-entry.gold {
+    color: #FFD700;
+    text-shadow: 1px 1px 0 #c8a900;
+}
+
+.leaderboard-entry.silver {
+    color: #C0C0C0;
+    text-shadow: 1px 1px 0 #a0a0a0;
+}
+
+.leaderboard-entry.bronze {
+    color: #CD7F32;
+    text-shadow: 1px 1px 0 #a5652a;
+}
+
+.leaderboard-expandable {
+    cursor: pointer;
+}
+
+.leaderboard-more {
+    display: none;
+}
